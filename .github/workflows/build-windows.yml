@@ -3,7 +3,7 @@ name: Build Windows EXE
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:  # позволяет запускать вручную
+  workflow_dispatch:
 
 jobs:
   build:
@@ -18,12 +18,32 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Download and Extract Windows JRE
+        run: |
+          Write-Host "Downloading JRE..."
+          curl -L -o jre.zip "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jre_x64_windows_hotspot_17.0.12_7.zip"
+          Write-Host "Extracting..."
+          tar -xf jre.zip
+          # Узнаем имя распакованной папки
+          $dir = Get-ChildItem -Directory | Where-Object { $_.Name -like "jdk-*jre*" }
+          Write-Host "Found JRE folder: $($dir.Name)"
+          Move-Item -Path $dir.FullName -Destination "jre"
+          Write-Host "Renamed to 'jre'"
+
+      - name: Verify jre exists
+        run: |
+          if (-not (Test-Path "jre")) {
+            Write-Error "jre folder not found!"
+            exit 1
+          }
+          Write-Host "jre/bin/java.exe exists:" (Test-Path "jre/bin/java.exe")
+
       - name: Install dependencies
         run: |
           pip install requests pyinstaller
 
       - name: Build executable
-        run:  pyinstaller --onefile --windowed --add-data "languagetool;languagetool" --add-data "jre;jre" spell_checker.py
+        run: pyinstaller --onefile --windowed --add-data "languagetool;languagetool" --add-data "jre;jre" spell_checker.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
