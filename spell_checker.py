@@ -99,8 +99,18 @@ class SpellCheckerApp:
         self.root.geometry("1050x650")
         self.root.resizable(True, True)
 
-        self.text_area = tk.Text(self.root, wrap="word", font=("Arial", 12))
+        self.text_area = tk.Text(self.root, wrap="word", font=("Arial", 16), state="normal")
         self.text_area.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+        self.text_area.bind("Control-v", self.paste_text)
+        self.text_area.bind("Control-V", self.paste_text) # На случай Caps Lock
+
+        def paste_text(self, event = None):
+            try:
+                # Всавить из буфера обмена
+                self.text_area.insert(tk.INSERT, self.text_area.clipboard_get())
+            except tk.TclError:
+                pass # Буфер пуст
+            return "break"
 
         button_frame = tk.Frame(self.root)
         button_frame.pack(pady=5)
@@ -115,25 +125,36 @@ class SpellCheckerApp:
             self.root,
             text="💡 Make sure LanguageTool server is running on port 8081!\n"
                  "Enter text and click 'Check Grammar & Spelling'",
-            font=("Arial", 10),
+            font=("Arial", 12),
             fg="gray",
             wraplength=800,
             justify="left"
         )
-        self.result_label.pack(pady=10)
+        self.result_label.pack(pady=12)
 
         self.last_matches = []
 
     def load_file(self):
-        file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt")])
+        file_path = filedialog.askopenfilename(
+            title="Select a .txt file",
+            filetypes=[("Text files", "*.txt")]
+        )
         if file_path:
-            try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                self.text_area.delete("1.0", tk.END)
-                self.text_area.insert(tk.END, content)
-            except Exception as e:
-                messagebox.showerror("Error", f"Could not read file:\n{str(e)}")
+            content = None
+            for encoding in ['utf-8', 'cp1252', 'cp1251', 'iso-8859-1']:
+                try:
+                    with open(file_path, "r", encoding=encoding) as f:
+                        content = f.read()
+                    break  # успех — выходим
+                except UnicodeDecodeError:
+                    continue  # пробуем следующую кодировку
+
+            if content is None:
+                messagebox.showerror("Error", "Could not read file: unknown encoding.")
+                return
+
+            self.text_area.delete("1.0", tk.END)
+            self.text_area.insert(tk.END, content)
 
     def check_text(self):
         text = self.text_area.get("1.0", tk.END).strip()
