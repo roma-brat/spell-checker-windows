@@ -5,22 +5,33 @@ import json
 import subprocess
 import os
 import atexit
+import sys
 
-# === Запуск LanguageTool сервера ===
+
+# === ГЛОБАЛЬНАЯ ПЕРЕМЕННАЯ (объявлена один раз на уровне модуля) ===
 _server_process = None
 
+def resource_path(relative_path):
+    """ Получает путь к ресурсу — работает и в dev, и в PyInstaller """
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 def start_languagetool_server():
-    global _server_process
+    global _server_process  # ← ОБЯЗАТЕЛЬНО В НАЧАЛЕ ФУНКЦИИ
     if _server_process is not None:
         return
 
-    # Определяем путь к java.exe
     if os.name == 'nt':  # Windows
-        java_exe = os.path.join("jre", "bin", "java.exe")
+        java_exe = resource_path(os.path.join("jre", "bin", "java.exe"))
     else:  # macOS/Linux
-        java_exe = "java"
+        java_exe = "/opt/homebrew/opt/openjdk/bin/java"
+        if not os.path.exists("java_exe"):
+            java_exe = "/usr/bin/java"
 
-    lt_jar = os.path.join("languagetool", "languagetool-server.jar")
+    lt_jar = resource_path(os.path.join("languagetool", "languagetool-server.jar"))
 
     if not os.path.exists(java_exe):
         raise FileNotFoundError(f"Java not found at {java_exe}")
@@ -30,16 +41,16 @@ def start_languagetool_server():
     _server_process = subprocess.Popen([
         java_exe, "-jar", lt_jar, "--port", "8081"
     ])
-    # Ждём запуска (можно добавить time.sleep(2), но для GUI — не критично)
 
 def stop_languagetool_server():
-    global _server_process
+    global _server_process  # ← ТОЖЕ В НАЧАЛЕ
     if _server_process:
         _server_process.terminate()
         _server_process = None
 
-# Запускаем сервер при старте
+# Запуск при старте
 start_languagetool_server()
+atexit.register(stop_languagetool_server)
 
 def check_text_with_languagetool(text, language="en-US"):
     """
