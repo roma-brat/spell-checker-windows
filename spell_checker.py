@@ -2,9 +2,44 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog
 import requests
 import json
+import subprocess
+import os
+import atexit
 
-# === Настройки ===
-LT_URL = "http://localhost:8081/v2/check"  # URL твоего локального сервера
+# === Запуск LanguageTool сервера ===
+_server_process = None
+
+ddef start_languagetool_server():
+    global _server_process
+    if _server_process is not None:
+        return
+
+    # Определяем путь к java.exe
+    if os.name == 'nt':  # Windows
+        java_exe = os.path.join("jre", "bin", "java.exe")
+    else:  # macOS/Linux
+        java_exe = "java"
+
+    lt_jar = os.path.join("languagetool", "languagetool-server.jar")
+
+    if not os.path.exists(java_exe):
+        raise FileNotFoundError(f"Java not found at {java_exe}")
+    if not os.path.exists(lt_jar):
+        raise FileNotFoundError(f"LanguageTool JAR not found at {lt_jar}")
+
+    _server_process = subprocess.Popen([
+        java_exe, "-jar", lt_jar, "--port", "8081"
+    ])
+    # Ждём запуска (можно добавить time.sleep(2), но для GUI — не критично)
+
+def stop_languagetool_server():
+    global _server_process
+    if _server_process:
+        _server_process.terminate()
+        _server_process = None
+
+# Запускаем сервер при старте
+start_languagetool_server()
 
 def check_text_with_languagetool(text, language="en-US"):
     """
