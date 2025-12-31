@@ -9,7 +9,7 @@ import atexit
 # === Запуск LanguageTool сервера ===
 _server_process = None
 
-ddef start_languagetool_server():
+def start_languagetool_server():
     global _server_process
     if _server_process is not None:
         return
