@@ -10,6 +10,7 @@ import sys
 
 # === ГЛОБАЛЬНАЯ ПЕРЕМЕННАЯ (объявлена один раз на уровне модуля) ===
 _server_process = None
+LT_URL = "http://localhost:8081/v2/check"
 
 def resource_path(relative_path):
     """ Получает путь к ресурсу — работает и в dev, и в PyInstaller """
@@ -104,14 +105,6 @@ class SpellCheckerApp:
         self.text_area.bind("Control-v", self.paste_text)
         self.text_area.bind("Control-V", self.paste_text) # На случай Caps Lock
 
-        def paste_text(self, event = None):
-            try:
-                # Всавить из буфера обмена
-                self.text_area.insert(tk.INSERT, self.text_area.clipboard_get())
-            except tk.TclError:
-                pass # Буфер пуст
-            return "break"
-
         button_frame = tk.Frame(self.root)
         button_frame.pack(pady=5)
 
@@ -182,6 +175,14 @@ class SpellCheckerApp:
             report += f"... and {len(matches) - 10} more."
 
         self.result_label.config(text=report, fg="white", justify="left")
+
+    def paste_text(self, event=None):
+        try:
+            # Всавить из буфера обмена
+            self.text_area.insert(tk.INSERT, self.text_area.clipboard_get())
+        except tk.TclError:
+            pass  # Буфер пуст
+        return "break"
 
     def auto_fix_all(self):
         text = self.text_area.get("1.0", tk.END).strip()
